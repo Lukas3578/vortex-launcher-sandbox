@@ -53,6 +53,18 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.64',
+    title: 'Reliable Mod Workspace',
+    summary: 'Modrinth search and installation are now more resilient, verifiable and easier to navigate in Sandbox Vortex.',
+    items: [
+      'Repairs the Mod Installer with current Modrinth search and Fabric-version resolution, clear network and API errors, pagination and sorting.',
+      'Verifies every installed Modrinth download as a JAR archive and against its SHA-512 hash before moving it atomically into the instance mods folder.',
+      'Adds Quick Picks for performance, minimap, voice chat, shaders and inventory searches.',
+      'Adds Mod Health: a read-only check for active, disabled and protected files plus missing Vortex requirements or malformed JAR signatures.',
+      'Clears stale search results when the selected Minecraft version changes, so results always match the active instance.'
+    ]
+  },
+  {
     version: '0.9.63',
     title: 'Sandbox Command Deck',
     summary: 'A more focused Sandbox Vortex start experience with safe performance profiles and an on-demand instance check.',
@@ -486,13 +498,18 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.53 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Sandbox-Vortex/0.9.64 (github.com/Lukas3578/vortex-launcher-sandbox)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
-  const response = await fetch(url, { headers: modrinthHeaders(), signal: AbortSignal.timeout(15000) });
-  if (!response.ok) throw new Error(`Modrinth responded with ${response.status}.`);
-  return response.json();
+  let response;
+  try { response = await fetch(url, { headers: modrinthHeaders(), signal: AbortSignal.timeout(20000) }); }
+  catch (error) { throw new Error(`Modrinth could not be reached: ${error.message || 'network error'}`); }
+  if (!response.ok) throw new Error(`Modrinth responded with HTTP ${response.status}.`);
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+  if (!contentType.includes('application/json')) throw new Error('Modrinth returned an invalid API response.');
+  try { return await response.json(); }
+  catch (_) { throw new Error('Modrinth returned unreadable JSON.'); }
 }
 function selectPrimaryFile(files = [], extension) { return files.find(file => file.primary && file.filename.toLowerCase().endsWith(extension)) || files.find(file => file.filename.toLowerCase().endsWith(extension)); }
 function selectPrimaryJar(files = []) { return selectPrimaryFile(files, '.jar'); }
@@ -547,6 +564,23 @@ function sha1ForModFile(file) {
     return crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex');
   } catch (_) { return null; }
 }
+function hasJarArchiveSignature(file) {
+  try { const descriptor = fs.openSync(file, 'r'); const marker = Buffer.alloc(4); fs.readSync(descriptor, marker, 0, 4, 0); fs.closeSync(descriptor); return isJarArchive(marker); }
+  catch (_) { return false; }
+}
+function modHealthSummary(version) {
+  const normalized = sanitizeVersion(version);
+  if (!normalized) return { ok: false, error: 'This Minecraft version is not supported.' };
+  const directory = modsRoot(normalized); ensureDir(directory);
+  const files = fs.readdirSync(directory).filter(name => /\.jar(?:\.disabled)?$/i.test(name));
+  const active = files.filter(name => name.endsWith('.jar'));
+  const disabled = files.filter(name => name.endsWith('.jar.disabled'));
+  const invalid = active.filter(name => !hasJarArchiveSignature(path.join(directory, name)));
+  const required = mandatoryModNames(normalized); const protectedNames = protectedModNames(normalized);
+  const missingRequired = [...required].filter(name => !exists(path.join(directory, name)));
+  const mapped = Object.keys(installedProjectMap(normalized)).length;
+  return { ok: true, version: normalized, active: active.length, disabled: disabled.length, protected: active.filter(name => protectedNames.has(name)).length, mapped, invalid, missingRequired, checkedAt: new Date().toISOString() };
+}
 async function mapInstalledModrinthFile(version, fileName) {
   const baseName = String(fileName || '').replace(/\.disabled$/i, '');
   const known = mappedProjectForFile(version, baseName);
@@ -591,40 +625,59 @@ async function resolveModInstall(projectId, gameVersion) {
   }
   return { versions: [...selected.entries()].map(([projectId, version]) => ({ projectId, version })), missing, conflicts };
 }
+function isJarArchive(buffer) { return Buffer.isBuffer(buffer) && buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b && ([0x03, 0x05, 0x07].includes(buffer[2])) && ([0x04, 0x06, 0x08].includes(buffer[3])); }
+function validJarFileName(name) { return /^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.jar$/i.test(String(name || '')); }
+async function downloadVerifiedModrinthJar(file, target) {
+  if (!file || !/^https:\/\//i.test(file.url) || !validJarFileName(file.filename)) throw new Error('Modrinth returned an unsafe mod file.');
+  const declaredSize = Number(file.size || 0);
+  if (declaredSize < 64 || declaredSize > 100 * 1024 * 1024) throw new Error('The mod file has an unsupported size.');
+  let response;
+  try { response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(120000) }); }
+  catch (error) { throw new Error(`The mod download could not start: ${error.message || 'network error'}`); }
+  if (!response.ok) throw new Error(`The mod download returned HTTP ${response.status}.`);
+  const advertisedLength = Number(response.headers.get('content-length') || 0);
+  if (advertisedLength && (advertisedLength < 64 || advertisedLength > 100 * 1024 * 1024)) throw new Error('The downloaded mod has an unsupported size.');
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length < 64 || buffer.length > 100 * 1024 * 1024 || !isJarArchive(buffer)) throw new Error('The download is not a valid JAR archive.');
+  if (file.hashes?.sha512) {
+    const digest = crypto.createHash('sha512').update(buffer).digest('hex');
+    if (digest.toLowerCase() !== String(file.hashes.sha512).toLowerCase()) throw new Error('The downloaded mod did not match Modrinth’s verification hash.');
+  }
+  const temporary = `${target}.download-${crypto.randomUUID()}`;
+  try { fs.writeFileSync(temporary, buffer, { flag: 'wx' }); fs.renameSync(temporary, target); }
+  finally { if (exists(temporary)) try { fs.rmSync(temporary, { force: true }); } catch (_) {} }
+}
 async function installModrinthProject(projectId, gameVersion) {
   const normalizedVersion = validModrinthVersion(gameVersion);
   if (!normalizedVersion || !projectId) throw new Error('Invalid mod or Minecraft version.');
   const plan = await resolveModInstall(projectId, normalizedVersion);
   if (!plan.versions.length) throw new Error(`No suitable Fabric version was found for Minecraft ${normalizedVersion}.`);
   const targetDir = modsRoot(normalizedVersion); ensureDir(targetDir);
-  const projects = installedProjectMap(normalizedVersion); const installed = []; const present = [];
+  const projects = installedProjectMap(normalizedVersion); const installed = []; const present = []; const failed = [];
   for (const entry of plan.versions) {
     const file = selectPrimaryJar(entry.version.files);
-    if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.jar$/i.test(file.filename)) { plan.missing.push(entry.projectId); continue; }
-    if (file.size > 100 * 1024 * 1024) { plan.missing.push(entry.projectId); continue; }
+    if (!file || !/^https:\/\//i.test(file.url) || !validJarFileName(file.filename)) { plan.missing.push(entry.projectId); continue; }
     const target = path.join(targetDir, file.filename);
-    if (exists(target)) { present.push(file.filename); const metadata = await getProjectMetadata(entry.projectId);
-    projects[entry.projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null }; continue; }
-    const response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(120000) });
-    if (!response.ok) { plan.missing.push(entry.projectId); continue; }
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.length > 100 * 1024 * 1024) { plan.missing.push(entry.projectId); continue; }
-    if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) { plan.missing.push(entry.projectId); continue; } }
-    fs.writeFileSync(target, buffer); const metadata = await getProjectMetadata(entry.projectId);
-    projects[entry.projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null }; installed.push(file.filename);
+    try {
+      if (exists(target)) { present.push(file.filename); }
+      else { await downloadVerifiedModrinthJar(file, target); installed.push(file.filename); }
+      const metadata = await getProjectMetadata(entry.projectId);
+      projects[entry.projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null };
+    } catch (error) { failed.push({ projectId: entry.projectId, message: error.message || 'download failed' }); plan.missing.push(entry.projectId); }
   }
   writeJson(installedProjectsFile(normalizedVersion), projects);
-  if (!installed.length && !present.length) throw new Error('No mod file could be installed.');
-  return { ok: true, version: normalizedVersion, installed, present, missing: [...new Set(plan.missing)], conflicts: [...new Set(plan.conflicts)] };
+  if (!installed.length && !present.length) throw new Error(failed[0]?.message || 'No mod file could be installed.');
+  return { ok: true, version: normalizedVersion, installed, present, missing: [...new Set(plan.missing)], conflicts: [...new Set(plan.conflicts)], failed };
 }
-async function searchModrinth(query, gameVersion, page = 0) {
+async function searchModrinth(query, gameVersion, page = 0, requestedIndex = 'relevance') {
   const normalizedVersion = validModrinthVersion(gameVersion);
   const normalizedQuery = String(query || '').trim().slice(0, 80);
   const normalizedPage = Math.max(0, Math.min(99, Number(page) || 0));
+  const index = new Set(['relevance', 'downloads', 'newest', 'updated']).has(requestedIndex) ? requestedIndex : 'relevance';
   if (!normalizedVersion) throw new Error('This Minecraft version is not supported.');
   if (normalizedQuery.length < 2) return { results: [], page: normalizedPage, pageSize: 12, total: 0, hasNext: false };
   const facets = JSON.stringify([['project_type:mod'], [`versions:${normalizedVersion}`], ['categories:fabric']]);
-  const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '12', offset: String(normalizedPage * 12), index: 'relevance' });
+  const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '12', offset: String(normalizedPage * 12), index });
   const result = await modrinthJson(`${MODRINTH_API}/search?${params}`);
   const suggestions = await Promise.all(result.hits.map(async hit => {
     try {
@@ -687,20 +740,14 @@ async function downloadModrinthMod(gameVersion, requested = {}) {
   const version = await modrinthJson(`${MODRINTH_API}/version/${encodeURIComponent(String(requested.versionId))}`);
   if (!Array.isArray(version.game_versions) || !version.game_versions.includes(normalizedVersion) || !Array.isArray(version.loaders) || !version.loaders.includes('fabric')) throw new Error('This mod version is not compatible with Fabric and the selected Minecraft version.');
   const file = selectPrimaryJar(version.files);
-  if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.jar$/i.test(file.filename)) throw new Error('Mod file could not be securely determined.');
-  if (file.size > 100 * 1024 * 1024) throw new Error('The mod file is larger than 100 MB and was rejected for security reasons.');
+  if (!file || !/^https:\/\//i.test(file.url) || !validJarFileName(file.filename)) throw new Error('Mod file could not be securely determined.');
   const targetDir = modsRoot(normalizedVersion); ensureDir(targetDir);
   const target = path.join(targetDir, file.filename);
   if (exists(target)) throw new Error(`The file ${file.filename} already exists in this instance.`);
-  const response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(120000) });
-  if (!response.ok) throw new Error(`Mod download failed (${response.status}).`);
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length > 100 * 1024 * 1024) throw new Error('The downloaded file is larger than 100 MB.');
-  if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('The mod file checksum does not match.'); }
-  fs.writeFileSync(target, buffer);
+  await downloadVerifiedModrinthJar(file, target);
   const projectId = String(requested.projectId || version.project_id || '');
   if (projectId) { const metadata = await getProjectMetadata(projectId); const projects = installedProjectMap(normalizedVersion); projects[projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null }; writeJson(installedProjectsFile(normalizedVersion), projects); }
-  return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: projectId || null };
+  return { ok: true, fileName: file.filename, size: Number(file.size || 0), version: normalizedVersion, projectId: projectId || null };
 }
 async function communityCookieHeader() {
   const cookies = await session.defaultSession.cookies.get({ url: COMMUNITY_BASE_URL });
@@ -1574,7 +1621,7 @@ ipcMain.handle('community-download-preset', async (_event, shareCode, filename) 
 ipcMain.handle('community-upload-preset', async (_event, metadata) => { try { return await uploadCommunityPreset(metadata); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-list-skins', async () => { try { return { ok: true, skins: await listCommunitySkins() }; } catch (error) { return { ok: false, skins: [], error: error.message }; } });
 ipcMain.handle('community-download-skin', async (_event, shareCode) => { try { return await downloadCommunitySkin(shareCode); } catch (error) { return { ok: false, error: error.message }; } });
-ipcMain.handle('search-mods', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchModrinth(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
+ipcMain.handle('search-mods', async (_event, query, version, page = 0, index = 'relevance') => { try { return { ok: true, ...await searchModrinth(query, version, page, index) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} was added to the Minecraft ${result.version} instance.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} mod file(s) provided for Minecraft ${result.version}.` }); if (result.conflicts.length) send('log', `Note: possible incompatible Modrinth projects: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Skipped (no matching version): ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('search-resource-packs', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchResourcePacks(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
@@ -1598,6 +1645,7 @@ ipcMain.handle('open-instance-folder', (_event, version) => { const normalized =
 ipcMain.handle('list-resource-packs', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const dir = resourcePacksRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.toLowerCase().endsWith('.zip')).sort().map(file => ({ name: file, file })); });
 ipcMain.handle('remove-resource-pack', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); if (!normalized || !/^\S+\.zip$/i.test(safeName)) return { ok: false, error: 'Invalid resource pack file.' }; const target = path.join(resourcePacksRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The resource pack was not found.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${safeName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: safeName, version: normalized }; });
 ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'No cosmetics profile for this version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
+ipcMain.handle('get-mod-health', (_event, version) => modHealthSummary(version));
 ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = await mapInstalledModrinthFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? await getProjectMetadata(mapping.projectId) : null; const iconUrl = metadata?.iconUrl || stored?.iconUrl || null; const iconData = mapping && iconUrl ? (metadata?.iconData || await cachedModIconData(mapping.projectId, iconUrl)) : null; return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl, iconData, title: metadata?.title || stored?.title || null, author: metadata?.author || stored?.author || null, role: cosmetics.has(name) ? 'Vortex Cosmetics core · automatically protected' : required.has(name) ? 'Vortex required mod' : enabled ? 'Custom mod · enabled' : 'Custom mod · disabled' }; })); });
 ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be removed.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The mod file was not found.' }; fs.rmSync(target, { force: true }); removeProjectMappingForFile(normalized, baseName); send('status', { type: 'success', message: `${baseName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: baseName, version: normalized }; });
 ipcMain.handle('toggle-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be disabled.' }; const dir = modsRoot(normalized); const source = path.join(dir, safeName); if (!exists(source)) return { ok: false, error: 'The mod file was not found.' }; const targetName = safeName.endsWith('.jar') ? `${safeName}.disabled` : safeName.slice(0, -'.disabled'.length); const target = path.join(dir, targetName); if (exists(target)) return { ok: false, error: 'The target file already exists.' }; fs.renameSync(source, target); return { ok: true, file: targetName, enabled: targetName.endsWith('.jar') }; });

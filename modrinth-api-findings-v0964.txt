@@ -1,0 +1,9 @@
+Modrinth API findings verified on 2026-08-22:
+
+- The official /search endpoint supports facets for project_type, categories (including loaders), and versions.
+- The official /project/{id|slug}/version endpoint accepts JSON-string query parameters for loaders, for example ["fabric"], and game_versions, for example ["1.18.1"].
+- The existing Sandbox implementation uses these documented parameter shapes. The repair should therefore focus on resilience, client-side error reporting, version fallback behavior, dependency resolution and verified download installation rather than replacing the documented basic endpoint paths.
+
+Sources visited:
+https://docs.modrinth.com/api/operations/searchprojects/
+https://docs.modrinth.com/api/operations/getprojectversions/
