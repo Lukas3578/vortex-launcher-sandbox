@@ -32,11 +32,12 @@ jobs:
           ## Sandbox Vortex $GITHUB_REF_NAME
 
           ### Neu
-          - Sandbox Vortex Launcher und Windows-Installer.
+          - Eigenständige Sandbox-Vortex-App mit separatem Installations- und Datenpfad neben dem normalen Vortex Launcher.
           - Verbesserte Cosmetics- und Cape-Unterstützung für Minecraft 1.21.11.
           - Gemeinsame Vortex-Cape-Synchronisierung für Spieler mit aktualisiertem Client.
 
           ### Behoben
+          - Sandbox Vortex überschreibt den normalen Vortex Launcher nicht und verwendet eine eigene App-ID sowie eigene lokale Daten.
           - Veraltete Vortex-Mod-Dateien und alte Skin-Overlay-Profile werden beim Instanz-Check bereinigt.
           - Cape-Konfiguration und mitgelieferte Assets werden vor dem Start geprüft.
 

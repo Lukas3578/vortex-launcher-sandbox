@@ -34,7 +34,7 @@ const serverStatusCache = new Map();
 const serverStatusPending = new Map();
 const SERVER_STATUS_CACHE_MS = 90 * 1000;
 
-const dataRoot = path.join(app.getPath('appData'), 'Vortex Client');
+const dataRoot = path.join(app.getPath('appData'), 'Sandbox Vortex');
 const instancesRoot = path.join(dataRoot, 'instances');
 const accountFile = path.join(dataRoot, 'account.json');
 const stateFile = path.join(dataRoot, 'launcher-state.json');
@@ -1475,7 +1475,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
 
 function createWindow() {
   Menu.setApplicationMenu(null);
-  mainWindow = new BrowserWindow({ width: 1380, height: 880, minWidth: 1080, minHeight: 720, backgroundColor: '#060914', title: 'Vortex Client', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false } });
+  mainWindow = new BrowserWindow({ width: 1380, height: 880, minWidth: 1080, minHeight: 720, backgroundColor: '#060914', title: 'Sandbox Vortex', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false } });
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 }
