@@ -53,6 +53,18 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.68',
+    title: 'Vortex Premium Atmosphere',
+    summary: 'Sandbox Vortex now has a more cinematic premium surface, with deeper layers and sharper, calmer detail work.',
+    items: [
+      'Adds ambient light fields and subtle workspace depth across the launcher without obscuring controls.',
+      'Refines the sidebar, brand mark, active navigation and update surface with premium glass, edge and glow treatments.',
+      'Elevates page headers, command deck, cards and primary actions with improved visual hierarchy and stronger focus states.',
+      'Adds a connected premium treatment to Cosmetics, libraries, status surfaces and creative workspaces.',
+      'Preserves all existing launcher actions, sandbox separation and reduced-motion behavior.'
+    ]
+  },
+  {
     version: '0.9.67',
     title: 'Vortex Motion Update',
     summary: 'Sandbox Vortex now responds with richer, more deliberate motion while keeping the workspace fast and readable.',
