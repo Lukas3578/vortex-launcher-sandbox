@@ -29,10 +29,10 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<EOF
-          ## Vortex Client $GITHUB_REF_NAME
+          ## Sandbox Vortex $GITHUB_REF_NAME
 
           ### Neu
-          - Aktueller Vortex-Launcher und Windows-Installer.
+          - Sandbox Vortex Launcher und Windows-Installer.
           - Verbesserte Cosmetics- und Cape-Unterstützung für Minecraft 1.21.11.
           - Gemeinsame Vortex-Cape-Synchronisierung für Spieler mit aktualisiertem Client.
 
@@ -50,9 +50,9 @@ jobs:
           Die Release-Beschreibung dokumentiert den Build-Stand. Ein echter Multiplayer-Test muss mit zwei gestarteten Vortex-Clients durchgeführt werden.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
+            gh release edit "$GITHUB_REF_NAME" --title "Sandbox Vortex $GITHUB_REF_NAME" --notes-file release-notes.md
           else
-            gh release create "$GITHUB_REF_NAME" --target "$GITHUB_SHA" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
+            gh release create "$GITHUB_REF_NAME" --target "$GITHUB_SHA" --title "Sandbox Vortex $GITHUB_REF_NAME" --notes-file release-notes.md
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

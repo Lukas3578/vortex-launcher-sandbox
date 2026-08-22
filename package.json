@@ -22,7 +22,8 @@
   },
   "build": {
     "appId": "com.vortexclient.launcher",
-    "productName": "Vortex Client",
+    "productName": "Sandbox Vortex",
+    "artifactName": "Sandbox Vortex Setup-${version}.${ext}",
     "directories": {
       "output": "release"
     },
@@ -34,7 +35,7 @@
     "publish": {
       "provider": "github",
       "owner": "Lukas3578",
-      "repo": "Vortex-launcher",
+      "repo": "vortex-launcher-sandbox",
       "releaseType": "release"
     },
     "win": {
@@ -52,7 +53,7 @@
       "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Vortex Client"
+      "shortcutName": "Sandbox Vortex"
     }
   }
 }
