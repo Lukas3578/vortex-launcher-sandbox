@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu, session, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
 const { PNG } = require('pngjs');
 const { Client } = require('minecraft-launcher-core');
@@ -13,7 +14,11 @@ const { getMinecraftServerStatus } = require('./minecraft-status');
 
 const execFileAsync = promisify(execFile);
 
-const FIXED_MEMORY = { min: '2G', max: '4G' };
+const MEMORY_PROFILES = Object.freeze({
+  focus: { label: 'Focus', memory: { min: '1G', max: '2G' }, minimumRamGiB: 4, description: 'For background play and smaller mod sets.' },
+  balanced: { label: 'Balanced', memory: { min: '2G', max: '4G' }, minimumRamGiB: 6, description: 'Recommended for the Vortex Fabric instance.' },
+  boost: { label: 'Boost', memory: { min: '3G', max: '6G' }, minimumRamGiB: 12, description: 'For larger mod packs on PCs with sufficient memory.' }
+});
 const SUPPORTED_VERSIONS = ['1.21.11', '26.1.1', '26.1.2', '26.2'];
 const COSMETICS_MOD_VERSION = '1.21.11';
 const HATS = ['none', 'vortex-cap', 'neon-halo', 'void-crown', 'cyber-headphones', 'slime-antenna'];
@@ -47,6 +52,18 @@ const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUP
 const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true });
 
 const RELEASE_NEWS = [
+  {
+    version: '0.9.63',
+    title: 'Sandbox Command Deck',
+    summary: 'A more focused Sandbox Vortex start experience with safe performance profiles and an on-demand instance check.',
+    items: [
+      'Reverts the cyan title-menu accents introduced in 0.9.62; Minecraft returns to the simpler, balanced Sandbox menu layout.',
+      'Rebuilds the launcher start page as a Vortex Command Deck with live instance, account and selected-server signals.',
+      'Adds local Focus, Balanced and Boost launch profiles. Minecraft receives only the selected profile memory range, and unsuitable profiles stay unavailable.',
+      'Adds Verify & Repair for the selected instance. It checks and restores only required Vortex files when they are missing or altered.',
+      'Adds a default-server Quick Join route and clear shortcuts to the server library, instances and mod folder.'
+    ]
+  },
   {
     version: '0.9.53',
     title: 'Skin Studio Heading Cleanup',
@@ -1058,16 +1075,30 @@ async function refreshServerStatus(id, force = false) {
   try { return await task; }
   finally { if (serverStatusPending.get(server.id) === task) serverStatusPending.delete(server.id); }
 }
+function installedMemoryGiB() { return Math.max(1, Math.floor(os.totalmem() / (1024 ** 3))); }
+function performanceProfiles() {
+  const installed = installedMemoryGiB();
+  return Object.entries(MEMORY_PROFILES).map(([id, profile]) => ({ id, label: profile.label, memory: { ...profile.memory }, description: profile.description, available: installed >= profile.minimumRamGiB, minimumRamGiB: profile.minimumRamGiB }));
+}
+function normalizePerformanceProfile(value) {
+  const profiles = performanceProfiles();
+  const requested = profiles.find(profile => profile.id === value && profile.available);
+  if (requested) return requested.id;
+  return profiles.find(profile => profile.id === 'balanced' && profile.available)?.id || profiles.find(profile => profile.available)?.id || 'focus';
+}
+function memoryForPerformanceProfile(value) { return { ...MEMORY_PROFILES[normalizePerformanceProfile(value)].memory }; }
+function performanceState(profile) { return { active: normalizePerformanceProfile(profile), profiles: performanceProfiles() }; }
 function loadState() {
   const legacy = loadJson(stateFile, {});
   return {
     selectedVersion: SUPPORTED_VERSIONS.includes(legacy.selectedVersion) ? legacy.selectedVersion : COSMETICS_MOD_VERSION,
     selectedServerId: serverById(legacy.selectedServerId)?.id || OFFICIAL_SERVER.id,
     hat: HATS.includes(legacy.hat) ? legacy.hat : 'vortex-cap',
-    emblem: EMBLEMS.includes(legacy.emblem) ? legacy.emblem : 'vortex-crest'
+    emblem: EMBLEMS.includes(legacy.emblem) ? legacy.emblem : 'vortex-crest',
+    performanceProfile: normalizePerformanceProfile(legacy.performanceProfile)
   };
 }
-function saveState(patch) { const state = { ...loadState(), ...patch }; if (!serverById(state.selectedServerId)) state.selectedServerId = OFFICIAL_SERVER.id; writeJson(stateFile, state); return state; }
+function saveState(patch) { const state = { ...loadState(), ...patch }; if (!serverById(state.selectedServerId)) state.selectedServerId = OFFICIAL_SERVER.id; state.performanceProfile = normalizePerformanceProfile(state.performanceProfile); writeJson(stateFile, state); return state; }
 
 function copyIfChanged(source, destination) {
   if (!exists(destination) || fs.statSync(source).size !== fs.statSync(destination).size || hashFile(source) !== hashFile(destination)) {
@@ -1344,7 +1375,7 @@ async function startMinecraftSession({ accountValue, version, server, parallel }
   launcher.on('download-status', data => send('progress', data));
   launcher.on('progress', data => send('progress', data));
   const javaPath = await javaPathForVersion(version);
-  const options = { authorization, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory }, window: parallel ? { width: 960, height: 620 } : { width: 1280, height: 720 } };
+  const options = { authorization, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: memoryForPerformanceProfile(loadState().performanceProfile), javaPath: javaPath || undefined, overrides: { gameDirectory }, window: parallel ? { width: 960, height: 620 } : { width: 1280, height: 720 } };
   if (server) options.quickPlay = { type: 'multiplayer', identifier: server.address };
   const child = await launcher.launch(options);
   minecraftProcesses.set(key, { child, kind: parallel ? 'parallel' : 'primary', username: accountValue.username, accountId: accountId(accountValue), gameDirectory });
@@ -1495,7 +1526,10 @@ app.on('before-quit', () => {
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('get-state', async () => {
+  const state = loadState();
+  return { account: account ? accountSummary(account) : null, accounts: accountSummaries(), state, performance: performanceState(state.performanceProfile), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() };
+});
 ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
 ipcMain.handle('get-bedrock-state', () => getBedrockState());
 ipcMain.handle('launch-bedrock', () => launchBedrock());
@@ -1549,6 +1583,14 @@ ipcMain.handle('check-for-updates', () => checkForUpdates());
 ipcMain.handle('download-update', () => downloadUpdate());
 ipcMain.handle('install-update', () => { if (updateState.status !== 'downloaded') return { ok: false, error: 'No downloaded update available.' }; autoUpdater.quitAndInstall(false, true); return { ok: true }; });
 ipcMain.handle('select-version', (_event, version) => ({ ok: Boolean(sanitizeVersion(version)), state: saveState({ selectedVersion: version }) }));
+ipcMain.handle('set-performance-profile', (_event, value) => {
+  const requested = String(value || '');
+  const profile = performanceProfiles().find(item => item.id === requested);
+  if (!profile || !profile.available) return { ok: false, error: 'This launch profile is not available on this PC.' };
+  const state = saveState({ performanceProfile: requested });
+  send('status', { type: 'success', message: `Launch profile set to ${MEMORY_PROFILES[state.performanceProfile].label}.` });
+  return { ok: true, state, performance: performanceState(state.performanceProfile) };
+});
 ipcMain.handle('prepare-instance', async (_event, version) => { try { return { ok: true, instance: await ensureInstance(version) }; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('get-instance-summary', (_event, version) => getInstanceSummary(version));
 ipcMain.handle('open-mods-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(modsRoot(normalized)); return shell.openPath(modsRoot(normalized)); });

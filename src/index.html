@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vortex Client Launcher</title>
+  <title>Sandbox Vortex</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><img src="../assets/branding/vortex-logo.png" alt="Vortex Client" /><div><strong>VORTEX</strong><span>CLIENT LAUNCHER</span></div></div>
+      <div class="brand"><img src="../assets/branding/vortex-logo.png" alt="Sandbox Vortex" /><div><strong>VORTEX</strong><span>SANDBOX LAUNCHER</span></div></div>
       <nav>
         <button class="nav-link active" data-page="play"><i>◉</i> Play</button>
         <button class="nav-link" data-page="servers"><i>◌</i> Servers</button>
@@ -25,18 +25,19 @@
       <section class="sidebar-card"><span class="green-dot"></span><div><strong>Vortex Core</strong><small>Automatically protected</small></div></section>
       <button class="sidebar-check-update" id="checkUpdatesBtn"><span class="sidebar-update-orb">↻</span><span><strong id="checkUpdatesTitle">Check for updates</strong><small id="checkUpdatesText">Search for a newer Sandbox build</small></span><b>›</b></button>
       <button class="sidebar-update" id="sidebarUpdate" hidden><span class="sidebar-update-orb">↻</span><span><strong>Client update available</strong><small id="sidebarUpdateText">New version ready</small></span><b>›</b></button>
-      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.9.62</span></div>
+      <div class="sidebar-footer">SANDBOX VORTEX<br><span>BUILD 0.9.63</span></div>
     </aside>
 
     <main>
       <header class="topbar"><div><p class="eyebrow">VORTEX CLIENT // FABRIC EDITION</p><h1>Ready for your world.</h1></div><div class="account" id="account"></div></header>
 
       <section class="page active" id="play">
-        <div class="hero"><div class="hero-content"><p class="eyebrow lime">OFFICIAL CLIENT INSTANCE</p><h2>Jump in.<br><em>Play on.</em></h2><p>The launcher installs Fabric and verified Vortex required mods in an isolated instance. Your own mods stay separate for every version.</p><div class="action-row"><button class="play-button" id="playBtn"><span>▶</span><b id="playLabel">Launch Vortex</b><small id="selectedVersionLabel">1.21.11</small></button><button class="button vortex-join-button" id="joinOfficialServerBtn">Join VortexPvP</button><button class="button secondary" id="openInstancesBtn">Open Instances Folder</button></div></div><img class="hero-logo" src="../assets/branding/vortex-logo.png" alt="Vortex" /><div class="hero-glow"></div></div>
-        <section class="quick-grid">
-          <article class="info-card version-card"><div class="card-header"><div><p class="eyebrow">ACTIVE INSTANCE</p><h3>Minecraft Version</h3></div><span class="status-pill">FABRIC</span></div><select id="versionSelect" aria-label="Minecraft version"></select><div class="meta-row"><span>Vortex Client</span><strong id="coreStatus">Checking …</strong></div></article>
-          <article class="info-card"><div class="card-header"><div><p class="eyebrow">MODS & FILES</p><h3>Your Instance</h3></div><span class="file-count" id="modCount">— mods</span></div><p class="card-copy">Every version has its own <code>mods</code> folder. Vortex required mods are protected; your additional compatible mods stay intact.</p><div class="folder-actions"><button class="button secondary" id="openModsBtn">Open Mods Folder</button><button class="button ghost" id="openInstanceBtn">Open Instance</button></div></article>
-          <article class="info-card cosmetic-quick"><div class="card-header"><div><p class="eyebrow">COSMETICS WORKSHOP</p><h3>Your Vortex Look</h3></div><button class="icon-button" id="cosmeticsInfoBtn">i</button></div><div class="cosmetic-preview"><span class="cosmetic-shape" id="cosmeticPreview">V</span><div><strong id="cosmeticName">Vortex Cap</strong><p><span id="emblemName">Vortex Cape</span> · Back-mounted cape</p></div></div><button class="text-button" data-page-target="cosmetics">Preview a local skin <span>→</span></button></article>
+        <div class="hero command-hero"><div class="hero-content"><p class="eyebrow lime">SANDBOX VORTEX · COMMAND DECK</p><h2>Built to play.<br><em>Ready to explore.</em></h2><p>Launch an isolated Fabric world, manage your setup and keep every Vortex file protected — all from one focused control space.</p><div class="action-row"><button class="play-button" id="playBtn"><span>▶</span><b id="playLabel">Launch Vortex</b><small id="selectedVersionLabel">1.21.11</small></button><button class="button vortex-join-button" id="joinOfficialServerBtn">Join VortexPvP</button><button class="button secondary" id="heroRepairBtn">Verify instance</button></div><div class="hero-live-strip"><span><i class="live-orb"></i><b id="heroCoreStatus">Checking Vortex Core</b></span><span id="heroAccountStatus">Minecraft account optional</span></div></div><img class="hero-logo" src="../assets/branding/vortex-logo.png" alt="Vortex" /><div class="hero-glow"></div></div>
+        <section class="command-grid">
+          <article class="command-card command-instance"><div class="card-header"><div><p class="eyebrow">ACTIVE WORKSPACE</p><h3>Choose your Vortex build</h3></div><span class="status-pill" id="deckInstanceStatus">CHECKING</span></div><select id="versionSelect" aria-label="Minecraft version"></select><div class="command-signal"><span class="signal-dot"></span><div><strong id="deckInstanceTitle">Preparing Vortex instance</strong><small id="deckInstanceDetail">Protected Fabric files are being checked.</small></div></div><div class="command-actions"><button class="button secondary" id="openInstancesBtn">Open Instances Folder</button><button class="text-button" id="openModsBtn">Mods <span>→</span></button></div></article>
+          <article class="command-card command-performance"><div class="card-header"><div><p class="eyebrow">LAUNCH PROFILE</p><h3>Match your PC</h3></div><span class="profile-badge" id="performanceProfileBadge">BALANCED</span></div><p class="command-copy" id="performanceProfileDetail">Vortex picks a reliable memory range for this instance.</p><div class="profile-options" role="group" aria-label="Launch performance profile"><button class="profile-option" data-performance-profile="focus"><span><strong>Focus</strong><small>1–2 GB</small></span><b>01</b></button><button class="profile-option" data-performance-profile="balanced"><span><strong>Balanced</strong><small>2–4 GB</small></span><b>02</b></button><button class="profile-option" data-performance-profile="boost"><span><strong>Boost</strong><small>3–6 GB</small></span><b>03</b></button></div><small class="profile-note" id="performanceProfileNote">Only profiles suited to this PC can be selected.</small></article>
+          <article class="command-card command-pulse"><div class="card-header"><div><p class="eyebrow">VORTEX PULSE</p><h3>Your next connection</h3></div><span class="pulse-badge" id="deckServerStatus">CHECK</span></div><div class="pulse-server"><span class="pulse-mark">V</span><div><strong id="deckServerName">VortexPvP</strong><small id="deckServerDetail">Checking the selected server …</small></div></div><div class="pulse-health"><span><i id="deckCoreDot"></i> Vortex Core <b id="deckCoreHealth">Checking</b></span><span><i id="deckAccountDot"></i> Minecraft account <b id="deckAccountHealth">Not signed in</b></span></div><div class="command-actions"><button class="button primary" id="quickJoinDefaultBtn">Quick Join</button><button class="text-button" id="openServerLibraryBtn">Server Library <span>→</span></button></div></article>
+          <article class="command-card command-verify"><div class="verify-orbit"><span>✓</span></div><div><p class="eyebrow">INSTANCE CARE</p><h3>Check. Repair. Play.</h3><p class="command-copy">Verify the selected Vortex instance before starting. Required files are restored only when they are missing or changed.</p><button class="button secondary verify-button" id="verifyInstanceBtn">Verify &amp; repair instance</button></div></article>
         </section>
         <section class="activity"><div class="activity-heading"><div><p class="eyebrow">LAUNCHER ACTIVITY</p><h3>System Timeline</h3></div><div class="log-tools"><button class="text-button" id="copyLog">Copy</button><button class="text-button" id="openLaunchLogBtn">Launch Log</button><button class="text-button" id="openCrashLogBtn">Crash Log</button><button class="text-button" id="clearLog">Clear</button></div></div><div class="log" id="log"></div></section>
       </section>
@@ -78,7 +79,7 @@
 
       <section class="page" id="resource-packs"><div class="page-heading"><p class="eyebrow">MODRINTH</p><h2>Resource Pack Installer</h2><p>Type a pack name. The build that matches your selected Minecraft version is picked automatically and saved directly into this instance.</p></div><div class="mod-search-bar"><input type="text" id="resourcePackQuery" placeholder="e.g. faithful, bare bones, vanilla" autocomplete="off" /><button class="button" id="resourcePackSearchBtn">Search</button><span class="mod-scope" id="resourcePackScope">for —</span></div><div id="resourcePackResults" class="mod-results"></div><section class="installed-block"><div class="section-title"><h3>In This Instance</h3><button class="text-button" id="toggleInstalledPacks">Collapse</button></div><div id="installedPacks" class="installed-list"></div></section></section>
 
-      <footer><span>VORTEX CLIENT 0.9.62</span><span id="statusText">Launcher ready</span></footer>
+      <footer><span>SANDBOX VORTEX 0.9.63</span><span id="statusText">Launcher ready</span></footer>
     </main>
   </div>
   <div class="news-modal" id="newsModal" hidden role="dialog" aria-modal="true" aria-labelledby="newsModalTitle">

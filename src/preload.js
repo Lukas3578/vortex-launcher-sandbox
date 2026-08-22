@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('vortex', {
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   selectVersion: (version) => ipcRenderer.invoke('select-version', version),
+  setPerformanceProfile: (profile) => ipcRenderer.invoke('set-performance-profile', profile),
   prepareInstance: (version) => ipcRenderer.invoke('prepare-instance', version),
   getInstanceSummary: (version) => ipcRenderer.invoke('get-instance-summary', version),
   openModsFolder: (version) => ipcRenderer.invoke('open-mods-folder', version),
