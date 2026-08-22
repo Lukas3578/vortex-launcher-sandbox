@@ -1,6 +1,6 @@
 {
   "name": "sandbox-vortex-launcher",
-  "version": "0.9.56",
+  "version": "0.9.57",
   "description": "Sandbox Vortex Launcher with isolated Fabric instances and Cosmetics",
   "main": "src/main.js",
   "author": "Vortex Client",
@@ -56,8 +56,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Sandbox Vortex",
       "guid": "6A3703F6-6092-40C1-AD59-2DAEF4DAA19C",
-      "uninstallerName": "Sandbox-Vortex-Uninstall.exe",
-      "uninstallDisplayName": "Sandbox Vortex",
+            "uninstallDisplayName": "Sandbox Vortex",
       "menuCategory": "Vortex Sandbox"
     }
   }
