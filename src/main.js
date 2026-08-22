@@ -53,6 +53,16 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.65',
+    title: 'Mod Installer Layout Fix',
+    summary: 'The Mod Installer and all later launcher pages are again correctly placed inside the main content area.',
+    items: [
+      'Removes an extra Cosmetics HTML closure that put Mod Installer, Installed Mods, Resource Packs, AI Studio and Community after the app shell.',
+      'Restores the Mod Installer directly beneath the top bar with no large blank upper area.',
+      'Verifies that every launcher page is a direct child of the main content container before release.'
+    ]
+  },
+  {
     version: '0.9.64',
     title: 'Reliable Mod Workspace',
     summary: 'Modrinth search and installation are now more resilient, verifiable and easier to navigate in Sandbox Vortex.',

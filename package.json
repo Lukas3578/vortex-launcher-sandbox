@@ -1,6 +1,6 @@
 {
   "name": "sandbox-vortex-launcher",
-  "version": "0.9.64",
+  "version": "0.9.65",
   "description": "Sandbox Vortex Launcher with isolated Fabric instances and Cosmetics",
   "main": "src/main.js",
   "author": "Vortex Client",
