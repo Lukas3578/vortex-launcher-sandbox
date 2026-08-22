@@ -53,6 +53,18 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.70',
+    title: 'Sandbox Health Center',
+    summary: 'A new diagnostics workspace gives every Sandbox Vortex instance a clear, local and read-only health overview.',
+    items: [
+      'Adds Diagnostics to Discover with an explicit Vortex Core, mod, storage, resource-pack and screenshot overview.',
+      'Adds safe folder tools for the selected instance, Mods, Resource Packs, Screenshots, Logs and exported Reports.',
+      'Adds local diagnostic report export for sharing or retaining a concise instance status record.',
+      'Keeps checks read-only: the Health Check does not remove or repair user files, and only the explicit report or folder buttons create or open Sandbox-owned folders.',
+      'Extends the left workspace navigation while leaving the normal Vortex Client untouched.'
+    ]
+  },
+  {
     version: '0.9.69',
     title: 'Workspace Navigation Update',
     summary: 'Every Sandbox Vortex category is now grouped and described as a clear workspace, not just a list item.',
@@ -1366,6 +1378,106 @@ function getInstanceSummary(version) {
   };
 }
 
+function folderDiagnosticStats(directory, entryLimit = 8000) {
+  const result = { files: 0, directories: 0, bytes: 0, partial: false };
+  if (!exists(directory)) return result;
+  const queue = [directory];
+  while (queue.length) {
+    const current = queue.pop();
+    let entries = [];
+    try { entries = fs.readdirSync(current, { withFileTypes: true }); } catch (_) { continue; }
+    for (const entry of entries) {
+      if (result.files + result.directories >= entryLimit) { result.partial = true; return result; }
+      const target = path.join(current, entry.name);
+      try {
+        if (entry.isSymbolicLink()) continue;
+        if (entry.isDirectory()) { result.directories += 1; queue.push(target); continue; }
+        if (entry.isFile()) { result.files += 1; result.bytes += fs.statSync(target).size; }
+      } catch (_) {}
+    }
+  }
+  return result;
+}
+function diagnosticsFolder(version, kind) {
+  const normalized = sanitizeVersion(version);
+  if (!normalized) return null;
+  const allowed = {
+    instance: instanceRoot(normalized),
+    mods: modsRoot(normalized),
+    resourcepacks: resourcePacksRoot(normalized),
+    screenshots: path.join(instanceRoot(normalized), 'screenshots'),
+    logs: path.join(dataRoot, 'logs'),
+    reports: path.join(dataRoot, 'reports')
+  };
+  return allowed[kind] || null;
+}
+function diagnosticsModHealth(version) {
+  const directory = modsRoot(version);
+  const files = exists(directory) ? fs.readdirSync(directory).filter(name => /\.jar(?:\.disabled)?$/i.test(name)) : [];
+  const active = files.filter(name => name.endsWith('.jar'));
+  const disabled = files.filter(name => name.endsWith('.jar.disabled'));
+  const protectedNames = protectedModNames(version);
+  const required = mandatoryModNames(version);
+  return { active: active.length, disabled: disabled.length, protected: active.filter(name => protectedNames.has(name)).length, invalid: active.filter(name => !hasJarArchiveSignature(path.join(directory, name))), missingRequired: [...required].filter(name => !exists(path.join(directory, name))) };
+}
+function sandboxDiagnostics(version) {
+  const normalized = sanitizeVersion(version);
+  if (!normalized) return { ok: false, error: 'This Minecraft version is not supported.' };
+  const instance = getInstanceSummary(normalized);
+  const health = diagnosticsModHealth(normalized);
+  const instanceStorage = folderDiagnosticStats(instanceRoot(normalized));
+  const modStorage = folderDiagnosticStats(modsRoot(normalized));
+  const packStorage = folderDiagnosticStats(resourcePacksRoot(normalized));
+  const screenshotStorage = folderDiagnosticStats(path.join(instanceRoot(normalized), 'screenshots'));
+  const logsStorage = folderDiagnosticStats(path.join(dataRoot, 'logs'));
+  const reportsStorage = folderDiagnosticStats(path.join(dataRoot, 'reports'));
+  return {
+    ok: true,
+    version: normalized,
+    checkedAt: new Date().toISOString(),
+    coreReady: Boolean(instance.ready) && health.missingRequired.length === 0,
+    instance,
+    health,
+    storage: { instance: instanceStorage, mods: modStorage, resourcePacks: packStorage, screenshots: screenshotStorage, logs: logsStorage, reports: reportsStorage },
+    performance: performanceState(loadState().performanceProfile),
+    update: { status: updateState.status, availableVersion: updateState.availableVersion || null }
+  };
+}
+function exportSandboxDiagnostics(version) {
+  const diagnostics = sandboxDiagnostics(version);
+  if (!diagnostics.ok) return diagnostics;
+  const reportsDir = diagnosticsFolder(diagnostics.version, 'reports');
+  ensureDir(reportsDir);
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const target = path.join(reportsDir, `sandbox-vortex-diagnostics-${diagnostics.version}-${stamp}.txt`);
+  const lines = [
+    'Sandbox Vortex Diagnostics',
+    `Generated: ${diagnostics.checkedAt}`,
+    `Minecraft: ${diagnostics.version}`,
+    `Vortex Core: ${diagnostics.coreReady ? 'ready' : 'attention required'}`,
+    `Active mods: ${diagnostics.health.active}`,
+    `Disabled mods: ${diagnostics.health.disabled}`,
+    `Protected mods: ${diagnostics.health.protected}`,
+    `Invalid JAR signatures: ${diagnostics.health.invalid.length}`,
+    `Missing required files: ${diagnostics.health.missingRequired.length ? diagnostics.health.missingRequired.join(', ') : 'none'}`,
+    `Instance files: ${diagnostics.storage.instance.files}`,
+    `Instance bytes: ${diagnostics.storage.instance.bytes}`,
+    `Mod bytes: ${diagnostics.storage.mods.bytes}`,
+    `Resource pack bytes: ${diagnostics.storage.resourcePacks.bytes}`,
+    `Screenshot files: ${diagnostics.storage.screenshots.files}`,
+    `Launch profile: ${diagnostics.performance?.label || 'managed'}`
+  ];
+  fs.writeFileSync(target, lines.join('\n') + '\n', 'utf8');
+  shell.showItemInFolder(target);
+  return { ok: true, version: diagnostics.version, fileName: path.basename(target) };
+}
+function openDiagnosticsFolder(version, kind) {
+  const folder = diagnosticsFolder(version, String(kind || ''));
+  if (!folder) return { ok: false, error: 'Unknown Sandbox folder.' };
+  ensureDir(folder);
+  return shell.openPath(folder).then(error => error ? { ok: false, error } : { ok: true, kind });
+}
+
 async function installFabricProfile(version, root) {
   const response = await fetch(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(version)}`);
   if (!response.ok) throw new Error(`Fabric metadata could not be loaded (${response.status}).`);
@@ -1698,6 +1810,9 @@ ipcMain.handle('set-performance-profile', (_event, value) => {
 });
 ipcMain.handle('prepare-instance', async (_event, version) => { try { return { ok: true, instance: await ensureInstance(version) }; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('get-instance-summary', (_event, version) => getInstanceSummary(version));
+ipcMain.handle('get-sandbox-diagnostics', (_event, version) => sandboxDiagnostics(version));
+ipcMain.handle('open-diagnostics-folder', (_event, version, kind) => openDiagnosticsFolder(version, kind));
+ipcMain.handle('export-sandbox-diagnostics', (_event, version) => { try { const result = exportSandboxDiagnostics(version); if (result.ok) send('status', { type: 'success', message: `Diagnostics report saved: ${result.fileName}` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('open-mods-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(modsRoot(normalized)); return shell.openPath(modsRoot(normalized)); });
 ipcMain.handle('open-instance-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(instanceRoot(normalized)); return shell.openPath(instanceRoot(normalized)); });
 ipcMain.handle('list-resource-packs', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const dir = resourcePacksRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.toLowerCase().endsWith('.zip')).sort().map(file => ({ name: file, file })); });
