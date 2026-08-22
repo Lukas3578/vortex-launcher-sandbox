@@ -53,6 +53,18 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.67',
+    title: 'Vortex Motion Update',
+    summary: 'Sandbox Vortex now responds with richer, more deliberate motion while keeping the workspace fast and readable.',
+    items: [
+      'Adds short page-entry and topbar-context transitions for more natural category changes.',
+      'Adds gentle depth movement to the Vortex mark, active loadout, AI result, Bedrock and Community surfaces.',
+      'Adds status pulses, active-navigation energy, scan lines and controlled light sweeps to show that key surfaces are alive.',
+      'Improves interaction feedback for primary actions and workspace cards without changing any existing functionality.',
+      'Includes a prefers-reduced-motion fallback that disables nonessential movement when the system requests it.'
+    ]
+  },
+  {
     version: '0.9.66',
     title: 'The Vortex Workspace Update',
     summary: 'Every Sandbox Vortex category now follows one clear, focused and premium Vortex workspace system.',
