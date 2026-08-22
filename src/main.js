@@ -53,6 +53,18 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.69',
+    title: 'Workspace Navigation Update',
+    summary: 'Every Sandbox Vortex category is now grouped and described as a clear workspace, not just a list item.',
+    items: [
+      'Groups the entire left navigation into Playspace, Worlds, Workshop and Discover.',
+      'Adds a short role description to every category, from Command Deck and Fabric Version Vault to Visual Vault and Private Creative Lab.',
+      'Introduces clearer active states and contextual LIVE or NEW markers without changing what any category does.',
+      'Keeps Vortex Core, update controls and all pages available while making the sidebar more readable on compact displays.',
+      'Preserves all existing sandbox behaviors and keeps the normal Vortex Client untouched.'
+    ]
+  },
+  {
     version: '0.9.68',
     title: 'Vortex Premium Atmosphere',
     summary: 'Sandbox Vortex now has a more cinematic premium surface, with deeper layers and sharper, calmer detail work.',

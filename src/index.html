@@ -10,22 +10,16 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><img src="../assets/branding/vortex-logo.png" alt="Sandbox Vortex" /><div><strong>VORTEX</strong><span>SANDBOX LAUNCHER</span></div></div>
-      <nav>
-        <button class="nav-link active" data-page="play"><i>◉</i> Play</button>
-        <button class="nav-link" data-page="servers"><i>◌</i> Servers</button>
-        <button class="nav-link" data-page="bedrock"><i>▣</i> Bedrock</button>
-        <button class="nav-link" data-page="instances"><i>▦</i> Instances</button>
-        <button class="nav-link" data-page="cosmetics"><i>✦</i> Cosmetics</button>
-        <button class="nav-link" data-page="mods"><i>▤</i> Mod Installer</button>
-        <button class="nav-link" data-page="overview"><i>◈</i> Installed Mods</button>
-        <button class="nav-link" data-page="resource-packs"><i>▧</i> Resource Packs</button>
-        <button class="nav-link" data-page="ai-studio"><i>✺</i> AI Studio</button>
-        <button class="nav-link community-nav" id="communityNav" data-page="community" hidden><i>☍</i> Community</button>
+      <nav class="workspace-nav" aria-label="Sandbox Vortex workspaces">
+        <section class="nav-group nav-group-primary"><p class="nav-group-label">PLAYSPACE</p><button class="nav-link active" data-page="play"><i>◉</i><span class="nav-copy"><strong>Play</strong><small>Command Deck</small></span><em class="nav-state">LIVE</em></button></section>
+        <section class="nav-group"><p class="nav-group-label">WORLDS</p><button class="nav-link" data-page="servers"><i>◌</i><span class="nav-copy"><strong>Servers</strong><small>Multiplayer library</small></span></button><button class="nav-link" data-page="bedrock"><i>▣</i><span class="nav-copy"><strong>Bedrock</strong><small>Minecraft for Windows</small></span></button><button class="nav-link" data-page="instances"><i>▦</i><span class="nav-copy"><strong>Instances</strong><small>Fabric version vault</small></span></button></section>
+        <section class="nav-group"><p class="nav-group-label">WORKSHOP</p><button class="nav-link" data-page="cosmetics"><i>✦</i><span class="nav-copy"><strong>Cosmetics</strong><small>Loadout studio</small></span></button><button class="nav-link" data-page="mods"><i>▤</i><span class="nav-copy"><strong>Mod Installer</strong><small>Verified Modrinth</small></span></button><button class="nav-link" data-page="overview"><i>◈</i><span class="nav-copy"><strong>Installed Mods</strong><small>Local library</small></span></button><button class="nav-link" data-page="resource-packs"><i>▧</i><span class="nav-copy"><strong>Resource Packs</strong><small>Visual vault</small></span></button></section>
+        <section class="nav-group"><p class="nav-group-label">DISCOVER</p><button class="nav-link" data-page="ai-studio"><i>✺</i><span class="nav-copy"><strong>AI Studio</strong><small>Private creative lab</small></span></button><button class="nav-link community-nav" id="communityNav" data-page="community" hidden><i>☍</i><span class="nav-copy"><strong>Community</strong><small>Share and discover</small></span><em class="nav-state">NEW</em></button></section>
       </nav>
       <section class="sidebar-card"><span class="green-dot"></span><div><strong>Vortex Core</strong><small>Automatically protected</small></div></section>
       <button class="sidebar-check-update" id="checkUpdatesBtn"><span class="sidebar-update-orb">↻</span><span><strong id="checkUpdatesTitle">Check for updates</strong><small id="checkUpdatesText">Search for a newer Sandbox build</small></span><b>›</b></button>
       <button class="sidebar-update" id="sidebarUpdate" hidden><span class="sidebar-update-orb">↻</span><span><strong>Client update available</strong><small id="sidebarUpdateText">New version ready</small></span><b>›</b></button>
-      <div class="sidebar-footer">SANDBOX VORTEX<br><span>BUILD 0.9.68</span></div>
+      <div class="sidebar-footer">SANDBOX VORTEX<br><span>BUILD 0.9.69</span></div>
     </aside>
 
     <main>
@@ -78,7 +72,7 @@
 
       <section class="page" id="resource-packs"><div class="page-heading"><p class="eyebrow">MODRINTH</p><h2>Resource Pack Installer</h2><p>Type a pack name. The build that matches your selected Minecraft version is picked automatically and saved directly into this instance.</p></div><div class="mod-search-bar"><input type="text" id="resourcePackQuery" placeholder="e.g. faithful, bare bones, vanilla" autocomplete="off" /><button class="button" id="resourcePackSearchBtn">Search</button><span class="mod-scope" id="resourcePackScope">for —</span></div><div id="resourcePackResults" class="mod-results"></div><section class="installed-block"><div class="section-title"><h3>In This Instance</h3><button class="text-button" id="toggleInstalledPacks">Collapse</button></div><div id="installedPacks" class="installed-list"></div></section></section>
 
-      <footer><span>SANDBOX VORTEX 0.9.68</span><span id="statusText">Launcher ready</span></footer>
+      <footer><span>SANDBOX VORTEX 0.9.69</span><span id="statusText">Launcher ready</span></footer>
     </main>
   </div>
   <div class="news-modal" id="newsModal" hidden role="dialog" aria-modal="true" aria-labelledby="newsModalTitle">
