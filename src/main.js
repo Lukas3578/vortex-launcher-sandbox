@@ -53,6 +53,18 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.66',
+    title: 'The Vortex Workspace Update',
+    summary: 'Every Sandbox Vortex category now follows one clear, focused and premium Vortex workspace system.',
+    items: [
+      'Adds a dedicated context title for every launcher category, so each area clearly communicates its purpose.',
+      'Rebuilds Play, Servers and Instances with consistent panels, safer visual status states and more deliberate action hierarchy.',
+      'Elevates Mod Installer, Resource Packs, Cosmetics and AI Studio into focused workspaces with stronger search, loadout and creation surfaces.',
+      'Refreshes Bedrock, Community and Installed Mods with unified cards, clearer Java and Bedrock boundaries and refined library views.',
+      'Keeps every existing launcher action intact while improving contrast, layout rhythm, hover feedback and small-screen safeguards.'
+    ]
+  },
+  {
     version: '0.9.65',
     title: 'Mod Installer Layout Fix',
     summary: 'The Mod Installer and all later launcher pages are again correctly placed inside the main content area.',
