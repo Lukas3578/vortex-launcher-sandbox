@@ -33,11 +33,11 @@ jobs:
 
           ### Neu
           - Eigenständige Sandbox-Vortex-App mit separatem Installations- und Datenpfad neben dem normalen Vortex Launcher.
-          - Verbesserte Cosmetics- und Cape-Unterstützung für Minecraft 1.21.11.
-          - Gemeinsame Vortex-Cape-Synchronisierung für Spieler mit aktualisiertem Client.
+          - Cosmetics und Capes sind ausschließlich in Sandbox Vortex enthalten.
+          - Eigene App-ID, eigener Installationspfad und eigener lokaler Datenordner für parallele Installation.
 
           ### Behoben
-          - Sandbox Vortex überschreibt den normalen Vortex Launcher nicht und verwendet eine eigene App-ID sowie eigene lokale Daten.
+          - Sandbox Vortex bleibt vollständig von der normalen Vortex-Client-Installation getrennt.
           - Veraltete Vortex-Mod-Dateien und alte Skin-Overlay-Profile werden beim Instanz-Check bereinigt.
           - Cape-Konfiguration und mitgelieferte Assets werden vor dem Start geprüft.
 
